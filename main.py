@@ -22,7 +22,7 @@ from _constants import *
 def main():
     pygame.init()
     pygame.display.set_caption("Game")
-    WINDOW = pygame.display.set_mode(SCREEN, pygame.RESIZABLE)
+    WINDOW = pygame.display.set_mode()
 
     clock = pygame.time.Clock()
     screen = SCREEN[:]
@@ -34,10 +34,6 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
-
-            elif event.type == pygame.VIDEORESIZE:
-                screen = (max(event.w, 480), max(event.h, 360))
-                WINDOW = pygame.display.set_mode(screen, pygame.RESIZABLE)
 
         WINDOW.fill(BLACK)
 

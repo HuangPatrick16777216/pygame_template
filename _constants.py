@@ -15,7 +15,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-SCREEN = (1280, 720)
+SCREEN = (1600, 900)
 FPS = 60
 
 BLACK = (0, 0, 0)
