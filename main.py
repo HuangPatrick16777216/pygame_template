@@ -22,10 +22,9 @@ from _constants import *
 def main():
     pygame.init()
     pygame.display.set_caption("Game")
-    WINDOW = pygame.display.set_mode()
+    WINDOW = pygame.display.set_mode(SCREEN)
 
     clock = pygame.time.Clock()
-    screen = SCREEN[:]
     while True:
         clock.tick(FPS)
         pygame.display.update()
