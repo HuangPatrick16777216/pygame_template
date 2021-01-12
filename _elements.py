@@ -19,74 +19,146 @@ import pygame
 from _constants import *
 
 
-class Button:
-    def __init__(self, loc, size, text):
-        self.loc = loc
-        self.size = size
+class Text:
+    def __init__(self, text):
         self.text = text
-        self.text_loc = (loc[0] + (size[0]-text.get_width())//2, loc[1] + (size[1]-text.get_height())//2)
 
-    def draw(self, window, events):
-        color = (GRAY_DARK if self.clicked(events) else GRAY_LIGHT) if self.hovered() else WHITE
-        pygame.draw.rect(window, color, self.loc+self.size)
-        pygame.draw.rect(window, WHITE, self.loc+self.size, 2)
-        window.blit(self.text, self.text_loc)
+    def draw(self, window, loc):
+        text_loc = [loc[i] - self.text.get_size()[i]//2 for i in range(2)]
+        window.blit(self.text, text_loc)
 
-    def hovered(self):
-        loc = self.loc
-        size = self.size
-        mouse_pos = pygame.mouse.get_pos()
-        if loc[0] <= mouse_pos[0] <= loc[0]+size[0] and loc[1] <= mouse_pos[1] <= loc[1]+size[1]:
+
+class Button:
+    def __init__(self, text):
+        self.text = text
+
+    def draw(self, window, events, loc, size):
+        loc = list(loc)
+        loc[0] -= size[0]//2
+
+        clicked = self.clicked(events, loc, size)
+        color = (GRAY_DARK if clicked else GRAY_LIGHT) if self.hovered(loc, size) else WHITE
+        text_loc = [loc[i] + (size[i]-self.text.get_size()[i])//2 for i in range(2)]
+
+        pygame.draw.rect(window, color, (*loc, *size))
+        pygame.draw.rect(window, BLACK, (*loc, *size), 2)
+        window.blit(self.text, text_loc)
+
+        return clicked
+
+    def hovered(self, loc, size):
+        mouse = pygame.mouse.get_pos()
+        if loc[0] <= mouse[0] <= loc[0]+size[0] and loc[1] <= mouse[1] <= loc[1]+size[1]:
             return True
         return False
 
-    def clicked(self, events):
-        for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.hovered():
-                return True
+    def clicked(self, events, loc, size):
+        if self.hovered(loc, size):
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    return True
         return False
 
 
-class Slider:
-    def __init__(self, loc, size, circle_size, font, label, default_val, val_range):
-        self.loc = loc
-        self.size = size
-        self.circle_size = circle_size
+class TextInput:
+    """Also written by Arjun Sahlot <https://github.com/ArjunSahlot"""
+
+    def __init__(self, font, label="", password=False, on_enter=None):
         self.font = font
         self.label = label
-        self.value = default_val
-        self.range = val_range
-        self.val_dist = val_range[1] - val_range[0]
-        self.dragging = False
+        self.password = password
+        self.on_enter = on_enter
 
-    def draw(self, window, events):
-        loc = self.loc
-        size = self.size
+        self.cursor_pos = 0
+        self.text = ""
+        self.editing = False
+        self.frame = 0
 
-        text = self.font.render(f"{self.label}: {self.value}", 1, WHITE)
-        text_loc = (loc[0] + (self.size[0]-text.get_width())//2, self.loc[1]+self.size[1]+7)
-        pygame.draw.rect(window, GRAY, loc+size)
-        pygame.draw.rect(window, WHITE, loc+size, 1)
-        pygame.draw.circle(window, WHITE, (self.value_to_loc(), self.loc[1]+self.size[1]//2), self.circle_size)
+        self.key_rpt_count = {}
+        self.key_rpt_init = 400
+        self.key_rpt_int = 35
+        self.clock = pygame.time.Clock()
+
+    def draw(self, window, events, loc, size):
+        self.frame += 1
+        loc = list(loc)
+        loc[0] -= size[0]//2
+
+        clicked = self.clicked(events, loc, size)
+        str_text = self.label if not self.editing and self.text == "" else self.text
+        if self.password and not self.text == "":
+            str_text = "*" * len(str_text)
+        text = self.font.render(str_text, 1, BLACK)
+        text_loc = [loc[i] + (size[i]-text.get_size()[i])//2 for i in range(2)]
+
+        color = GRAY_DARK if clicked else (GRAY_LIGHT if self.hovered(loc, size) and not self.editing else WHITE)
+        pygame.draw.rect(window, color, (*loc, *size))
+        pygame.draw.rect(window, BLACK, (*loc, *size), 2)
         window.blit(text, text_loc)
+        if self.editing and (self.frame//30) % 2 == 0:
+            cursor_x = text_loc[0] + self.font.render(str_text[:self.cursor_pos], 1, BLACK).get_width()
+            pygame.draw.line(window, BLACK, (cursor_x, loc[1]+12), (cursor_x, loc[1]+size[1]-12))
 
-        mouse_pos = pygame.mouse.get_pos()
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if loc[0] <= mouse_pos[0] <= loc[0]+size[0] and loc[1] <= mouse_pos[1] <= loc[1]+size[1]:
-                    self.dragging = True
+                self.editing = self.hovered(loc, size)
+            elif event.type == pygame.KEYDOWN and self.editing:
+                if event.key in (pygame.K_ESCAPE, pygame.K_TAB):
+                    self.editing = False
+                elif event.key in (pygame.K_KP_ENTER, pygame.K_RETURN):
+                    self.editing = False
+                    if self.on_enter is not None:
+                        self.editing = True
+                        self.on_enter()
+                        self.text = ""
 
-        clicked = pygame.mouse.get_pressed()[0]
-        if not clicked:
-            self.dragging = False
-        
-        if clicked and self.dragging:
-            self.value = self.loc_to_value(mouse_pos[0])
+                else:
+                    if event.key not in self.key_rpt_count:
+                        self.key_rpt_count[event.key] = [0, event.unicode]
 
-    def loc_to_value(self, loc):
-        fac = max(min((loc-self.loc[0]) / self.size[0], 1), 0)
-        return int(fac*self.val_dist + self.range[0])
+                    if event.key == pygame.K_LEFT:
+                        self.cursor_pos -= 1
+                    elif event.key == pygame.K_RIGHT:
+                        self.cursor_pos += 1
+                    elif event.key in (pygame.K_HOME, pygame.K_PAGEDOWN):
+                        self.cursor_pos = 0
+                    elif event.key in (pygame.K_END, pygame.K_PAGEUP):
+                        self.cursor_pos = len(self.text)
 
-    def value_to_loc(self):
-        fac = (self.value-self.range[0]) / self.val_dist
-        return fac * self.size[0] + self.loc[0]
+                    elif event.key == pygame.K_BACKSPACE:
+                        self.text = self.text[:self.cursor_pos-1] + self.text[self.cursor_pos:]
+                        self.cursor_pos -= 1
+                    elif event.key == pygame.K_DELETE:
+                        self.text = self.text[:self.cursor_pos] + self.text[self.cursor_pos+1:]
+                    else:
+                        self.text = self.text[:self.cursor_pos] + event.unicode + self.text[self.cursor_pos:]
+                        self.cursor_pos += 1
+
+                self.cursor_pos = min(max(self.cursor_pos, 0), len(self.text))
+
+            elif event.type == pygame.KEYUP:
+                if event.key in self.key_rpt_count:
+                    del self.key_rpt_count[event.key]
+
+        for key in self.key_rpt_count:
+            self.key_rpt_count[key][0] += self.clock.get_time()
+
+            if self.key_rpt_count[key][0] >= self.key_rpt_init:
+                self.key_rpt_count[key][0] = self.key_rpt_init - self.key_rpt_int
+                event_key, event_unicode = key, self.key_rpt_count[key][1]
+                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=event_key, unicode=event_unicode))
+
+        self.clock.tick()
+
+    def hovered(self, loc, size):
+        mouse = pygame.mouse.get_pos()
+        if loc[0] <= mouse[0] <= loc[0]+size[0] and loc[1] <= mouse[1] <= loc[1]+size[1]:
+            return True
+        return False
+
+    def clicked(self, events, loc, size):
+        if self.hovered(loc, size):
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    return True
+        return False
