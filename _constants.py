@@ -15,7 +15,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-SCREEN = (1600, 900)
+import os
+import pygame
+pygame.init()
+
+
+PARDIR = os.path.realpath(os.path.dirname(__file__))
 FPS = 60
 
 BLACK = (0, 0, 0)
@@ -23,3 +28,7 @@ GRAY_DARK = (80, 80, 80)
 GRAY = (128, 128, 128)
 GRAY_LIGHT = (192, 192, 192)
 WHITE = (255, 255, 255)
+
+FONT_SMALL = pygame.font.SysFont("ubuntu", 16)
+FONT_MED = pygame.font.SysFont("ubuntu", 26)
+FONT_LARGE = pygame.font.SysFont("ubuntu", 36)
