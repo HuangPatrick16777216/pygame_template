@@ -17,12 +17,15 @@
 
 import pygame
 from _constants import *
+pygame.init()
 
 
 def main():
-    pygame.init()
     pygame.display.set_caption("Game")
-    WINDOW = pygame.display.set_mode(SCREEN)
+    window = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
+
+    width, height = 1280, 720
+    resized = False
 
     clock = pygame.time.Clock()
     while True:
@@ -34,7 +37,15 @@ def main():
                 pygame.quit()
                 return
 
-        WINDOW.fill(BLACK)
+            elif event.type == pygame.VIDEORESIZE:
+                width, height = event.w, event.h
+                resized = True
+
+            elif event.type == pygame.ACTIVEEVENT and resized:
+                window = pygame.display.set_mode((width, height), pygame.RESIZABLE)
+                resized = False
+
+        window.fill(BLACK)
 
 
 main()
