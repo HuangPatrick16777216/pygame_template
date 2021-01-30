@@ -61,7 +61,7 @@ class Button:
 
 
 class TextInput:
-    """Also written by Arjun Sahlot <https://github.com/ArjunSahlot"""
+    """Also written by Arjun Sahlot <https://github.com/ArjunSahlot>"""
 
     def __init__(self, font, label="", password=False, on_enter=None):
         self.font = font
